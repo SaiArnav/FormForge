@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   Search,
@@ -12,12 +11,12 @@ import {
   Check,
   Copy,
   Globe,
-  Lock,
   MessageSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import { StatusChip } from '@/components/admin/data-table';
 import QRCode from 'qrcode';
+import { Reveal } from '@/components/anim/reveal';
 
 export default function FormsListPage() {
   const [forms, setForms] = useState<any[]>([]);
@@ -63,22 +62,6 @@ export default function FormsListPage() {
     }
   };
 
-  const handleTogglePublish = async (formId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
-    try {
-      const res = await fetch(`/api/admin/forms/${formId}/publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        fetchForms();
-      }
-    } catch (e) {
-      console.error('Failed to toggle publish status:', e);
-    }
-  };
-
   const handleDeleteForm = async (formId: string) => {
     if (!confirm('Are you sure you want to delete this form and all its responses?')) return;
     try {
@@ -113,20 +96,16 @@ export default function FormsListPage() {
         </div>
 
         <Link href="/admin/forms/new">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-opacity hover:opacity-95"
-          >
+          <button className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.02] active:scale-[0.98]">
             <Plus className="h-4 w-4" />
             <span>Create New Form</span>
-          </motion.button>
+          </button>
         </Link>
       </div>
 
       {/* Filter & Search Bar */}
       <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-xs">
-        <div className="relative flex w-full max-w-md items-center rounded-xl border border-border bg-muted/40 px-3.5 py-2">
+        <div className="relative flex w-full max-w-md items-center rounded-xl border border-border bg-muted/40 px-3.5 py-2 transition-all focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-400/20">
           <Search className="h-4 w-4 text-muted-foreground mr-2" />
           <input
             type="text"
@@ -144,7 +123,7 @@ export default function FormsListPage() {
       {/* Forms Grid */}
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-400 border-t-transparent" />
         </div>
       ) : filteredForms.length === 0 ? (
         <div className="glass-card flex flex-col items-center justify-center rounded-3xl p-12 text-center">
@@ -155,7 +134,7 @@ export default function FormsListPage() {
           </p>
           {!search && (
             <Link href="/admin/forms/new" className="mt-4">
-              <button className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">
+              <button className="rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25">
                 Create First Form
               </button>
             </Link>
@@ -164,12 +143,11 @@ export default function FormsListPage() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {filteredForms.map((form, idx) => (
-            <motion.div
+            <Reveal
               key={form.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: idx * 0.05 }}
-              className="glass-card flex flex-col justify-between rounded-2xl p-6 shadow-sm"
+              delay={idx * 60}
+              distance={18}
+              className="glass-card flex flex-col justify-between rounded-2xl p-6 shadow-sm transition-transform duration-200 hover:-translate-y-1"
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -191,11 +169,11 @@ export default function FormsListPage() {
 
                 <div className="mt-4 flex items-center gap-4 text-xs font-mono text-muted-foreground border-t border-border/60 pt-3">
                   <div className="flex items-center gap-1">
-                    <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                    <MessageSquare className="h-3.5 w-3.5 text-brand-400" />
                     <span>{form._count?.responses || 0} responses</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Globe className="h-3.5 w-3.5 text-indigo-400" />
+                    <Globe className="h-3.5 w-3.5 text-cyan-400" />
                     <span>{form._count?.questions || 0} fields</span>
                   </div>
                 </div>
@@ -213,7 +191,7 @@ export default function FormsListPage() {
                 <button
                   onClick={() => handleCopyLink(form.id)}
                   title="Copy Public Link"
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:border-brand-400 hover:text-foreground"
                 >
                   {copiedId === form.id ? (
                     <Check className="h-4 w-4 text-emerald-500" />
@@ -225,7 +203,7 @@ export default function FormsListPage() {
                 <button
                   onClick={() => handleOpenQR(form.id)}
                   title="Generate QR Code"
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:border-brand-400 hover:text-foreground"
                 >
                   <QrIcon className="h-4 w-4" />
                 </button>
@@ -236,7 +214,7 @@ export default function FormsListPage() {
                   rel="noopener noreferrer"
                   title="View Live Form"
                 >
-                  <button className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-primary transition-colors">
+                  <button className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-brand-400">
                     <ExternalLink className="h-4 w-4" />
                   </button>
                 </a>
@@ -244,62 +222,55 @@ export default function FormsListPage() {
                 <button
                   onClick={() => handleDeleteForm(form.id)}
                   title="Delete Form"
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:border-destructive/30 hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       )}
 
       {/* QR Code Dialog Modal */}
-      <AnimatePresence>
-        {qrModalUrl && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="glass-card w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center"
-            >
-              <h3 className="font-display text-lg font-bold text-foreground">Form QR Code</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Scan to open public form link directly on mobile devices.
-              </p>
+      {qrModalUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="glass-card w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl text-center animate-scale-in">
+            <h3 className="font-display text-lg font-bold text-foreground">Form QR Code</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Scan to open public form link directly on mobile devices.
+            </p>
 
-              {qrImageData && (
-                <div className="my-5 flex justify-center p-3 bg-white rounded-2xl border border-border">
-                  <img src={qrImageData} alt="Form QR Code" className="h-48 w-48 object-contain" />
-                </div>
-              )}
-
-              <p className="text-[11px] font-mono text-muted-foreground truncate mb-4">
-                {qrModalUrl}
-              </p>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(qrModalUrl);
-                    alert('Copied URL to clipboard!');
-                  }}
-                  className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
-                >
-                  Copy Link
-                </button>
-                <button
-                  onClick={() => setQrModalUrl(null)}
-                  className="rounded-xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
-                >
-                  Close
-                </button>
+            {qrImageData && (
+              <div className="my-5 flex justify-center p-3 bg-white rounded-2xl border border-border">
+                <img src={qrImageData} alt="Form QR Code" className="h-48 w-48 object-contain" />
               </div>
-            </motion.div>
+            )}
+
+            <p className="text-[11px] font-mono text-muted-foreground truncate mb-4">
+              {qrModalUrl}
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(qrModalUrl);
+                  alert('Copied URL to clipboard!');
+                }}
+                className="flex-1 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 py-2.5 text-xs font-semibold text-white shadow-md shadow-brand-500/25"
+              >
+                Copy Link
+              </button>
+              <button
+                onClick={() => setQrModalUrl(null)}
+                className="rounded-xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

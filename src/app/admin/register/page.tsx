@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, User, Mail, Lock, AlertCircle, ShieldCheck, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Reveal } from '@/components/anim/reveal';
+import { FloatingBackground } from '@/components/anim/floating-background';
 
 export default function AdminRegisterPage() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function AdminRegisterPage() {
   if (hasUsers === null) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-400 border-t-transparent" />
       </div>
     );
   }
@@ -67,42 +68,33 @@ export default function AdminRegisterPage() {
     return null;
   }
 
-  return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 font-sans text-foreground selection:bg-primary/20">
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 right-10 h-[400px] w-[400px] rounded-full bg-indigo-500/10 blur-[100px]" />
+  const inputClass =
+    'w-full rounded-xl border border-border bg-card/60 py-2.5 pl-10 pr-4 font-sans text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20';
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
+  return (
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 font-sans text-foreground selection:bg-brand-400/20">
+      <FloatingBackground />
+
+      <Reveal className="relative z-10 w-full max-w-md animate-slide-up">
         <div className="mb-8 text-center">
-          <motion.div
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-          >
-            <Sparkles className="h-7 w-7" />
-          </motion.div>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-cyan-500 text-white shadow-lg shadow-brand-500/30">
+            <Sparkles className="h-7 w-7" strokeWidth={2.5} />
+          </div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground">
             Set Up FormForge
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create the first admin account. You will be the platform <strong className="text-foreground">Owner</strong>.
+            Create the first admin account. You will be the platform{' '}
+            <strong className="text-foreground">Owner</strong>.
           </p>
         </div>
 
-        <div className="glass-card rounded-3xl p-8 shadow-xl">
+        <div className="glass-card rounded-3xl border border-white/10 p-8 shadow-2xl shadow-black/30">
           {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mb-6 flex items-center gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive"
-            >
+            <Reveal className="mb-6 flex items-center gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive animate-fade-in">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
-            </motion.div>
+            </Reveal>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -118,7 +110,7 @@ export default function AdminRegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your Name"
-                  className="w-full rounded-xl border border-border bg-muted/40 py-2.5 pl-10 pr-4 font-sans text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -135,7 +127,7 @@ export default function AdminRegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@organization.com"
-                  className="w-full rounded-xl border border-border bg-muted/40 py-2.5 pl-10 pr-4 font-sans text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -153,20 +145,18 @@ export default function AdminRegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Min. 6 characters"
-                  className="w-full rounded-xl border border-border bg-muted/40 py-2.5 pl-10 pr-4 font-sans text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               disabled={loading}
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-sans text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-opacity hover:opacity-95 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 py-3 font-sans text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
             >
               {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
                 <>
                   <CheckCircle className="h-4 w-4" />
@@ -174,13 +164,13 @@ export default function AdminRegisterPage() {
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
-            </motion.button>
+            </button>
           </form>
 
           <div className="mt-6 border-t border-border pt-5 text-center">
             <p className="text-xs text-muted-foreground">
               Already have an account?{' '}
-              <Link href="/admin/login" className="font-semibold text-primary hover:underline">
+              <Link href="/admin/login" className="font-semibold text-brand-400 hover:underline">
                 Sign in
               </Link>
             </p>
@@ -191,7 +181,7 @@ export default function AdminRegisterPage() {
           <ShieldCheck className="h-4 w-4 text-emerald-500" />
           <span>First user is automatically assigned the Owner role</span>
         </div>
-      </motion.div>
+      </Reveal>
     </div>
   );
 }

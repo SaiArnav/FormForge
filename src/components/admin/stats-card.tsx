@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
+import { Reveal } from '@/components/anim/reveal';
 
 interface StatsCardProps {
   title: string;
@@ -24,18 +24,16 @@ export function StatsCard({
   delay = 0,
 }: StatsCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay }}
-      whileHover={{ y: -3 }}
-      className="glass-card flex flex-col justify-between rounded-2xl p-5 shadow-sm"
+    <Reveal
+      delay={delay}
+      distance={18}
+      className="glass-card flex flex-col justify-between rounded-2xl p-5 shadow-sm transition-transform duration-200 hover:-translate-y-1"
     >
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </p>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 text-white shadow-md shadow-brand-500/20">
           <Icon className="h-4 w-4" />
         </div>
       </div>
@@ -49,7 +47,7 @@ export function StatsCard({
           <div className="mt-2 flex items-center gap-1.5 text-xs">
             <span
               className={`inline-flex items-center font-mono font-semibold ${
-                isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                isPositive ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
               {isPositive ? (
@@ -63,6 +61,6 @@ export function StatsCard({
           </div>
         )}
       </div>
-    </motion.div>
+    </Reveal>
   );
 }

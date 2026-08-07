@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 export const metadata: Metadata = {
   title: 'FormForge — Premium Dynamic Form Builder',
   description:
-    'Enterprise private form management, real-time analytics, and respondent workflows built with Next.js, Prisma, and Framer Motion.',
+    'Enterprise private form management, real-time analytics, and respondent workflows built with Next.js, Prisma, and Anime.js.',
 };
 
 export default function RootLayout({

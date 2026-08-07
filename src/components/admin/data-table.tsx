@@ -1,18 +1,17 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { MoreVertical, CheckCircle2, Clock, AlertTriangle, FileText } from 'lucide-react';
+import { MoreVertical, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export function StatusChip({ status }: { status: 'VERIFIED' | 'PENDING' | 'FLAGGED' | 'COMPLETED' | 'DRAFT' | 'PUBLISHED' }) {
   const styles = {
-    VERIFIED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    COMPLETED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    PUBLISHED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    DRAFT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    FLAGGED: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+    VERIFIED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    COMPLETED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    PUBLISHED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    DRAFT: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    FLAGGED: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   };
 
   const icons = {
@@ -63,16 +62,14 @@ export function RecentActivityTable({ items }: { items: ActivityRow[] }) {
         </thead>
         <tbody className="divide-y divide-border font-sans text-sm">
           {items.map((row, idx) => (
-            <motion.tr
+            <tr
               key={row.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: idx * 0.04 }}
-              className="group transition-colors hover:bg-muted/30"
+              className="group animate-fade-in transition-colors hover:bg-muted/30"
+              style={{ animationDelay: `${idx * 40}ms` }}
             >
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 font-display text-xs font-bold text-primary">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-400/15 font-display text-xs font-bold text-brand-300">
                     {row.respondentInitials}
                   </div>
                   <div>
@@ -82,7 +79,7 @@ export function RecentActivityTable({ items }: { items: ActivityRow[] }) {
                 </div>
               </td>
               <td className="px-6 py-4 font-medium text-foreground">
-                <Link href={`/admin/forms/${row.formId}/edit`} className="hover:text-primary transition-colors">
+                <Link href={`/admin/forms/${row.formId}/edit`} className="hover:text-brand-300 transition-colors">
                   {row.formTitle}
                 </Link>
               </td>
@@ -105,7 +102,7 @@ export function RecentActivityTable({ items }: { items: ActivityRow[] }) {
                   <MoreVertical className="h-4 w-4" />
                 </button>
               </td>
-            </motion.tr>
+            </tr>
           ))}
         </tbody>
       </table>

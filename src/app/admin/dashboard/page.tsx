@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { StatsCard } from '@/components/admin/stats-card';
 import { SubmissionTrendsChart, RoleBreakdownCard } from '@/components/admin/chart-card';
 import { RecentActivityTable } from '@/components/admin/data-table';
@@ -36,7 +35,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-400 border-t-transparent" />
       </div>
     );
   }
@@ -80,14 +79,10 @@ export default function AdminDashboardPage() {
           </a>
 
           <Link href="/admin/forms/new">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-95"
-            >
+            <button className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.02] active:scale-[0.98]">
               <Plus className="h-3.5 w-3.5" />
               <span>Create Form</span>
-            </motion.button>
+            </button>
           </Link>
         </div>
       </div>
@@ -99,28 +94,28 @@ export default function AdminDashboardPage() {
           value={(data?.totalResponses ?? 0).toLocaleString()}
           subtitle="live total in database"
           icon={MessageSquare}
-          delay={0.05}
+          delay={0}
         />
         <StatsCard
           title="Completion Rate"
           value={`${data?.completionRate ?? 0}%`}
           subtitle="submitted vs total"
           icon={CheckCircle2}
-          delay={0.1}
+          delay={100}
         />
         <StatsCard
           title="Avg. Time to Complete"
           value={formatSeconds(data?.avgCompletionTime ?? 0)}
           subtitle="average fill time"
           icon={Clock}
-          delay={0.15}
+          delay={200}
         />
         <StatsCard
           title="Active Forms"
           value={data?.totalForms ?? 0}
           subtitle="total forms created"
           icon={FileText}
-          delay={0.2}
+          delay={300}
         />
       </div>
 
@@ -148,7 +143,7 @@ export default function AdminDashboardPage() {
           </div>
           <Link
             href="/admin/responses"
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-xs font-semibold text-brand-300 hover:underline"
           >
             View all responses →
           </Link>

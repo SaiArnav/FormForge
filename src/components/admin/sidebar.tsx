@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   FileText,
@@ -13,7 +12,6 @@ import {
   Plus,
   Sparkles,
   LogOut,
-  HelpCircle,
 } from 'lucide-react';
 import { Role } from '@/types';
 
@@ -45,16 +43,13 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col justify-between border-r border-border bg-card p-4 transition-all duration-300">
+    <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col justify-between border-r border-border bg-card/70 p-4 backdrop-blur-xl transition-all duration-300">
       {/* Top Header Logo */}
       <div>
         <div className="mb-6 flex items-center gap-3 px-2 pt-2">
-          <motion.div
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20"
-          >
-            <Sparkles className="h-5 w-5" />
-          </motion.div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 text-white shadow-md shadow-brand-500/25">
+            <Sparkles className="h-5 w-5" strokeWidth={2.5} />
+          </div>
           <div>
             <h1 className="font-display text-lg font-bold leading-tight tracking-tight text-foreground">
               FormForge
@@ -75,24 +70,21 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
 
             return (
               <Link key={item.href} href={item.href}>
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 font-sans text-sm font-medium transition-all ${
+                <div
+                  className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-150 hover:translate-x-1 ${
                     isActive
-                      ? 'bg-primary/10 text-primary dark:bg-primary/20 font-semibold'
+                      ? 'bg-brand-400/15 text-brand-300 font-semibold'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Icon
+                    className={`h-4 w-4 transition-colors ${
+                      isActive ? 'text-brand-400' : 'text-muted-foreground group-hover:text-foreground'
+                    }`}
+                  />
                   <span>{item.label}</span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeNavIndicator"
-                      className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
-                    />
-                  )}
-                </motion.div>
+                  {isActive && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-brand-400" />}
+                </div>
               </Link>
             );
           })}
@@ -102,20 +94,16 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
       {/* CTA Button & User Details */}
       <div className="space-y-4">
         <Link href="/admin/forms/new">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-sans text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-opacity hover:opacity-95"
-          >
+          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-3 font-sans text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.02] active:scale-[0.97]">
             <Plus className="h-4 w-4" />
             <span>Create New Form</span>
-          </motion.button>
+          </button>
         </Link>
 
         {/* User Card & Logout */}
         <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 font-display text-xs font-bold text-primary">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-400/20 font-display text-xs font-bold text-brand-300">
               {userName.substring(0, 2).toUpperCase()}
             </div>
             <div className="truncate">

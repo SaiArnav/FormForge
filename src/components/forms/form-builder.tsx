@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   closestCenter,
@@ -27,8 +26,6 @@ import {
   Eye,
   Save,
   CheckCircle,
-  Globe,
-  Settings,
   Type,
   AlignLeft,
   Mail,
@@ -43,8 +40,6 @@ import {
   Upload,
   Image as ImageIcon,
   ArrowLeft,
-  QrCode as QrIcon,
-  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { QuestionDTO, QuestionType, FormStatus } from '@/types';
@@ -354,15 +349,13 @@ export function FormBuilder({ initialForm, isNew = false }: FormBuilderProps) {
 
           {/* Floating Add Question Bar */}
           <div className="sticky bottom-6 z-20 flex items-center justify-center gap-2">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+            <button
               onClick={() => addQuestion('SHORT_ANSWER')}
-              className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 font-sans text-xs font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition-opacity hover:opacity-95"
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-brand-500 to-cyan-500 px-5 py-3 font-sans text-xs font-semibold text-white shadow-xl shadow-brand-500/25 transition-transform hover:scale-[1.03] active:scale-[0.97]"
             >
               <Plus className="h-4 w-4" />
               <span>Add Question</span>
-            </motion.button>
+            </button>
           </div>
         </div>
       )}
