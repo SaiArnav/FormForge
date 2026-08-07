@@ -5,6 +5,8 @@ import { QuestionType } from '@/types';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const TEXT_EXTENSIONS = new Set(['.txt', '.md', '.csv', '.tsv', '.json', '.log', '.yml', '.yaml', '.xml', '.html']);
@@ -88,15 +90,93 @@ function sanitizeQuestions(raw: unknown): ParsedQuestion[] {
     });
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function callGemini(parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>): Promise<{
+  ok: boolean;
+  status: number;
+  text: string;
+}> {
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
+        }),
+      }
+    );
+
+    if (res.status !== 429 && res.status !== 500) break;
+
+    console.warn(`Gemini rate limit / server error (${res.status}), retrying in ${(attempt + 1) * 2}s...`);
+    await sleep((attempt + 1) * 2000);
+  }
+
+  const status = res?.status || 502;
+  if (!res || !res.ok) {
+    const errText = res ? await res.text().catch(() => '') : '';
+    console.error('Gemini API error:', status, errText);
+    return { ok: false, status, text: errText };
+  }
+
+  const json = await res.json();
+  const text =
+    json?.candidates?.[0]?.content?.parts
+      ?.map((p: { text?: string }) => p.text)
+      .filter(Boolean)
+      .join('') || '';
+  return { ok: true, status, text };
+}
+
+async function callGroq(documentText: string): Promise<{ ok: boolean; status: number; text: string }> {
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.2,
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: `${PROMPT}\n\nDocument content:\n${documentText}` }],
+      }),
+    });
+
+    if (res.status !== 429 && res.status !== 500) break;
+
+    console.warn(`Groq rate limit / server error (${res.status}), retrying in ${(attempt + 1) * 2}s...`);
+    await sleep((attempt + 1) * 2000);
+  }
+
+  const status = res?.status || 502;
+  if (!res || !res.ok) {
+    const errText = res ? await res.text().catch(() => '') : '';
+    console.error('Groq API error:', status, errText);
+    return { ok: false, status, text: errText };
+  }
+
+  const json = await res.json();
+  const text = json?.choices?.[0]?.message?.content || '';
+  return { ok: true, status, text };
+}
+
 export async function POST(request: Request) {
   const session = await getAuthSession();
   if (!session || !checkRole(session.role, 'EDITOR')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  if (!GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY && !GROQ_API_KEY) {
     return NextResponse.json(
-      { error: 'GEMINI_API_KEY is not configured. Add it to your .env file.' },
+      { error: 'No AI provider configured. Add GEMINI_API_KEY or GROQ_API_KEY to your environment.' },
       { status: 500 }
     );
   }
@@ -114,44 +194,71 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const extension = file.name.split('.').pop()?.toLowerCase() || '';
     const extWithDot = `.${extension}`;
+    const isTextFile = TEXT_EXTENSIONS.has(extWithDot);
+    const documentText = isTextFile ? buffer.toString('utf-8') : '';
 
-    let parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>;
-    if (TEXT_EXTENSIONS.has(extWithDot)) {
-      parts = [{ text: `${PROMPT}\n\nDocument filename: ${file.name}\n\n${buffer.toString('utf-8')}` }];
-    } else {
-      parts = [
-        { text: `${PROMPT}\n\nDocument filename: ${file.name}` },
-        { inline_data: { mime_type: file.type || 'application/octet-stream', data: buffer.toString('base64') } },
-      ];
-    }
+    const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = isTextFile
+      ? [{ text: `${PROMPT}\n\nDocument filename: ${file.name}\n\n${documentText}` }]
+      : [
+          { text: `${PROMPT}\n\nDocument filename: ${file.name}` },
+          { inline_data: { mime_type: file.type || 'application/octet-stream', data: buffer.toString('base64') } },
+        ];
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
-        }),
+    // Provider 1: Gemini (handles binary files like PDF/DOCX natively)
+    let aiText = '';
+    let usedProvider = 'gemini';
+    if (GEMINI_API_KEY) {
+      const geminiResult = await callGemini(parts);
+      if (geminiResult.ok) {
+        aiText = geminiResult.text;
+      } else if (geminiResult.status === 429 && isTextFile && GROQ_API_KEY) {
+        // Provider 2 fallback: Groq (text-only)
+        const groqResult = await callGroq(documentText);
+        if (groqResult.ok) {
+          aiText = groqResult.text;
+          usedProvider = 'groq';
+        } else {
+          console.error('Both providers failed. Gemini:', geminiResult.status, 'Groq:', groqResult.status);
+          return NextResponse.json(
+            {
+              error:
+                'Both AI providers are rate-limited right now. Wait a minute and try again.',
+            },
+            { status: 429 }
+          );
+        }
+      } else if (geminiResult.status === 429) {
+        return NextResponse.json(
+          {
+            error:
+              'Gemini is rate-limited and the Groq fallback only works for text files (.txt, .md, .csv, etc.). Convert your file to text and try again, or wait a minute.',
+          },
+          { status: 429 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: `AI provider error (${geminiResult.status}). Check your GEMINI_API_KEY.` },
+          { status: 502 }
+        );
       }
-    );
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errText);
+    } else if (GROQ_API_KEY && isTextFile) {
+      const groqResult = await callGroq(documentText);
+      if (groqResult.ok) {
+        aiText = groqResult.text;
+        usedProvider = 'groq';
+      } else {
+        return NextResponse.json(
+          { error: `AI provider error (${groqResult.status}). Check your GROQ_API_KEY.` },
+          { status: 502 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: `AI provider error (${geminiRes.status}). Check your GEMINI_API_KEY.` },
-        { status: 502 }
+        { error: 'GEMINI_API_KEY is not configured, and GROQ_API_KEY fallback only supports text files.' },
+        { status: 500 }
       );
     }
 
-    const geminiJson = await geminiRes.json();
-    const aiText =
-      geminiJson?.candidates?.[0]?.content?.parts
-        ?.map((p: { text?: string }) => p.text)
-        .filter(Boolean)
-        .join('') || '';
     if (!aiText.trim()) {
       return NextResponse.json({ error: 'AI returned an empty response' }, { status: 502 });
     }
@@ -197,7 +304,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ form: newForm, questionCount: questions.length }, { status: 201 });
+    return NextResponse.json({ form: newForm, questionCount: questions.length, provider: usedProvider }, { status: 201 });
   } catch (error) {
     console.error('AI import error:', error);
     return NextResponse.json(

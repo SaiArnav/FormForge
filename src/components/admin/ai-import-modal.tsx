@@ -20,6 +20,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [createdFormId, setCreatedFormId] = useState<string | null>(null);
+  const [usedProvider, setUsedProvider] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -28,6 +29,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
     setFile(null);
     setStatus('IDLE');
     setError('');
+    setUsedProvider(null);
   };
 
   const handleClose = () => {
@@ -67,6 +69,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
       }
       setStatus('SUCCESS');
       setCreatedFormId(json.form.id);
+      setUsedProvider(json.provider || 'gemini');
       onImported(json.form.id);
     } catch {
       setError('Network error while importing. Please try again.');
@@ -86,7 +89,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
             <div>
               <h3 className="font-display text-lg font-bold text-foreground">AI Import Form</h3>
               <p className="text-[11px] font-mono text-muted-foreground">
-                Gemini extracts questions → builds a form
+                Gemini + Groq fallback extracts questions → builds a form
               </p>
             </div>
           </div>
@@ -107,6 +110,10 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
             <p className="mt-1 text-xs text-muted-foreground">
               AI imported <span className="font-semibold text-foreground">{file?.name}</span> and built
               your form in draft. Review it in the builder, then publish to get the share link.
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-brand-400/30 bg-brand-400/10 px-3 py-1 text-[11px] font-mono font-semibold text-brand-300">
+              <Sparkles className="h-3 w-3" />
+              Generated with {usedProvider === 'groq' ? 'Groq' : 'Gemini'}
             </p>
             <div className="mt-5 flex gap-2">
               {createdFormId && (
