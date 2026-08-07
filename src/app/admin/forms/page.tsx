@@ -12,11 +12,13 @@ import {
   Copy,
   Globe,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { StatusChip } from '@/components/admin/data-table';
 import QRCode from 'qrcode';
 import { Reveal } from '@/components/anim/reveal';
+import { AiImportModal } from '@/components/admin/ai-import-modal';
 
 export default function FormsListPage() {
   const [forms, setForms] = useState<any[]>([]);
@@ -25,6 +27,7 @@ export default function FormsListPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [qrModalUrl, setQrModalUrl] = useState<string | null>(null);
   const [qrImageData, setQrImageData] = useState<string | null>(null);
+  const [showAiImport, setShowAiImport] = useState(false);
 
   const fetchForms = async () => {
     try {
@@ -95,12 +98,22 @@ export default function FormsListPage() {
           </p>
         </div>
 
-        <Link href="/admin/forms/new">
-          <button className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.02] active:scale-[0.98]">
-            <Plus className="h-4 w-4" />
-            <span>Create New Form</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAiImport(true)}
+            className="flex items-center gap-2 rounded-xl border border-brand-400/30 bg-brand-400/10 px-4 py-2.5 text-sm font-semibold text-brand-300 shadow-md transition-all hover:scale-[1.02] hover:bg-brand-400/15 active:scale-[0.98]"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>AI Import</span>
           </button>
-        </Link>
+
+          <Link href="/admin/forms/new">
+            <button className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+              <Plus className="h-4 w-4" />
+              <span>Create New Form</span>
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -231,6 +244,15 @@ export default function FormsListPage() {
           ))}
         </div>
       )}
+
+      {/* AI Import Modal */}
+      <AiImportModal
+        open={showAiImport}
+        onClose={() => setShowAiImport(false)}
+        onImported={() => {
+          fetchForms();
+        }}
+      />
 
       {/* QR Code Dialog Modal */}
       {qrModalUrl && (
