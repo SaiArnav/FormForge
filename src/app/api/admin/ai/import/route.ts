@@ -92,6 +92,37 @@ function sanitizeQuestions(raw: unknown): ParsedQuestion[] {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<string | null> {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  try {
+    if (ext === 'pdf') {
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: buffer });
+      const { text } = await parser.getText();
+      parser.destroy();
+      return text || null;
+    }
+    if (ext === 'docx') {
+      const mammoth = await import('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value || null;
+    }
+    if (ext === 'xlsx' || ext === 'xls') {
+      const xlsx = await import('xlsx');
+      const workbook = xlsx.read(buffer, { type: 'buffer' });
+      const cells: string[] = [];
+      workbook.SheetNames.forEach((sheetName: string) => {
+        const sheet = workbook.Sheets[sheetName];
+        if (sheet) cells.push(xlsx.utils.sheet_to_csv(sheet));
+      });
+      return cells.join('\n') || null;
+    }
+  } catch (e) {
+    console.error('Failed to extract text from file:', filename, e);
+  }
+  return null;
+}
+
 async function callGemini(parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>): Promise<{
   ok: boolean;
   status: number;
@@ -211,9 +242,22 @@ export async function POST(request: Request) {
       const geminiResult = await callGemini(parts);
       if (geminiResult.ok) {
         aiText = geminiResult.text;
-      } else if (geminiResult.status === 429 && isTextFile && GROQ_API_KEY) {
-        // Provider 2 fallback: Groq (text-only)
-        const groqResult = await callGroq(documentText);
+      } else if (geminiResult.status === 429 && GROQ_API_KEY) {
+        // Provider 2 fallback: Groq. Needs plain text, so extract it from the file first.
+        let textForGroq = documentText;
+        if (!isTextFile) {
+          textForGroq = (await extractTextFromBuffer(buffer, file.name)) || '';
+        }
+        if (!textForGroq.trim()) {
+          return NextResponse.json(
+            {
+              error:
+                'Gemini is rate-limited and the file text could not be extracted for the Groq fallback. Try again in a minute.',
+            },
+            { status: 429 }
+          );
+        }
+        const groqResult = await callGroq(textForGroq);
         if (groqResult.ok) {
           aiText = groqResult.text;
           usedProvider = 'groq';
@@ -231,7 +275,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error:
-              'Gemini is rate-limited and the Groq fallback only works for text files (.txt, .md, .csv, etc.). Convert your file to text and try again, or wait a minute.',
+              'Gemini is rate-limited. Wait a minute and try again.',
           },
           { status: 429 }
         );
@@ -241,8 +285,18 @@ export async function POST(request: Request) {
           { status: 502 }
         );
       }
-    } else if (GROQ_API_KEY && isTextFile) {
-      const groqResult = await callGroq(documentText);
+    } else if (GROQ_API_KEY) {
+      let textForGroq = documentText;
+      if (!isTextFile) {
+        textForGroq = (await extractTextFromBuffer(buffer, file.name)) || '';
+      }
+      if (!textForGroq.trim()) {
+        return NextResponse.json(
+          { error: 'Could not extract text from the file for AI processing.' },
+          { status: 500 }
+        );
+      }
+      const groqResult = await callGroq(textForGroq);
       if (groqResult.ok) {
         aiText = groqResult.text;
         usedProvider = 'groq';
@@ -254,7 +308,7 @@ export async function POST(request: Request) {
       }
     } else {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is not configured, and GROQ_API_KEY fallback only supports text files.' },
+        { error: 'No AI provider configured. Add GEMINI_API_KEY or GROQ_API_KEY to your environment.' },
         { status: 500 }
       );
     }
