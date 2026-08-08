@@ -17,10 +17,44 @@ interface ChartCardProps {
   title: string;
   subtitle?: string;
   data: Array<{ date: string; count: number }>;
+  range: '7D' | '30D';
+  onRangeChange?: (range: '7D' | '30D') => void;
 }
 
-export function SubmissionTrendsChart({ title, subtitle, data }: ChartCardProps) {
-  const [timeRange, setTimeRange] = useState<'7D' | '30D'>('7D');
+export function SubmissionTrendsChart({
+  title,
+  subtitle,
+  data,
+  range,
+  onRangeChange,
+}: ChartCardProps) {
+  const [prevCounts, setPrevCounts] = useState<Record<string, number>>({});
+  const [flashMap, setFlashMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const counts: Record<string, number> = {};
+    data.forEach((d) => {
+      counts[d.date] = d.count;
+    });
+
+    const flashes: Record<string, boolean> = {};
+    data.forEach((d) => {
+      if ((prevCounts[d.date] ?? -1) >= 0 && prevCounts[d.date] !== d.count) {
+        flashes[d.date] = true;
+      }
+    });
+    setFlashMap(flashes);
+
+    const t = setTimeout(() => setFlashMap({}), 1200);
+    setPrevCounts(counts);
+    return () => clearTimeout(t);
+  }, [data]);
+
+  const setRange = (r: '7D' | '30D') => {
+    setFlashMap({});
+    setPrevCounts({});
+    onRangeChange?.(r);
+  };
 
   return (
     <Reveal
@@ -36,9 +70,9 @@ export function SubmissionTrendsChart({ title, subtitle, data }: ChartCardProps)
 
         <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/50 p-1">
           <button
-            onClick={() => setTimeRange('7D')}
+            onClick={() => setRange('7D')}
             className={`rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition-all ${
-              timeRange === '7D'
+              range === '7D'
                 ? 'bg-brand-400 text-white font-semibold shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -46,9 +80,9 @@ export function SubmissionTrendsChart({ title, subtitle, data }: ChartCardProps)
             7D
           </button>
           <button
-            onClick={() => setTimeRange('30D')}
+            onClick={() => setRange('30D')}
             className={`rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition-all ${
-              timeRange === '30D'
+              range === '30D'
                 ? 'bg-brand-400 text-white font-semibold shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -67,11 +101,13 @@ export function SubmissionTrendsChart({ title, subtitle, data }: ChartCardProps)
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#94a3b8' }}
+              interval={range === '30D' ? 'preserveStartEnd' : 0}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#94a3b8' }}
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={{
@@ -88,6 +124,8 @@ export function SubmissionTrendsChart({ title, subtitle, data }: ChartCardProps)
               fill="url(#trendGradient)"
               radius={[6, 6, 0, 0]}
               maxBarSize={45}
+              animationDuration={600}
+              animationEasing="ease-out"
             />
             <defs>
               <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
@@ -97,6 +135,22 @@ export function SubmissionTrendsChart({ title, subtitle, data }: ChartCardProps)
             </defs>
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Live pulse indicator */}
+      <div className="mt-3 flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-500">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          </span>
+          Auto-refreshes every 60s
+        </span>
+        {Object.values(flashMap).some(Boolean) && (
+          <span className="text-[11px] font-mono font-semibold text-cyan-400 animate-fade-in">
+            + new submission
+          </span>
+        )}
       </div>
     </Reveal>
   );

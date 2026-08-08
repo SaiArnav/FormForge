@@ -11,11 +11,12 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [range, setRange] = useState<'7D' | '30D'>('7D');
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (r: '7D' | '30D' = range) => {
     try {
       setRefreshing(true);
-      const res = await fetch('/api/admin/analytics');
+      const res = await fetch(`/api/admin/analytics?range=${r}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -29,8 +30,20 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    fetchAnalytics(range);
+    const interval = setInterval(() => fetchAnalytics(range), 60000);
+    return () => clearInterval(interval);
+  }, [range]);
+
+  useEffect(() => {
+    if (data?.lastUpdated) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('last-updated');
+        if (el) el.textContent = new Date(data.lastUpdated).toLocaleTimeString();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [data]);
 
   if (loading) {
     return (
@@ -62,8 +75,16 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <span className="hidden items-center gap-1.5 text-[11px] font-mono text-muted-foreground md:flex">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <span id="last-updated">Live</span>
+          </span>
+
           <button
-            onClick={fetchAnalytics}
+            onClick={() => fetchAnalytics()}
             disabled={refreshing}
             className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-xs transition-colors hover:bg-muted"
           >
@@ -124,8 +145,10 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2">
           <SubmissionTrendsChart
             title="Submission Trends"
-            subtitle="Global submission volume over recent periods"
+            subtitle="Live submission volume over recent periods"
             data={data?.submissionTrends || []}
+            range={range}
+            onRangeChange={setRange}
           />
         </div>
         <RoleBreakdownCard

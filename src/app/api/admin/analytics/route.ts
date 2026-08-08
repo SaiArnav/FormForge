@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getAuthSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const range = searchParams.get('range') === '30D' ? '30D' : '7D';
 
   try {
     const totalForms = await db.form.count();
@@ -74,34 +77,62 @@ export async function GET() {
       };
     });
 
-    // Generate submission trends (last 7 days)
-    const daysMap: Record<string, number> = {};
+    // Generate submission trends for selected range
+    const days = range === '30D' ? 30 : 7;
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const daysMap: Record<string, number> = {};
 
-    for (let i = 6; i >= 0; i--) {
+    for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dayLabel = daysOfWeek[d.getDay()];
-      daysMap[dayLabel] = 0;
+      const label =
+        range === '30D'
+          ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : daysOfWeek[d.getDay()];
+      daysMap[label] = 0;
     }
 
-    responses.forEach((r) => {
-      const dayLabel = daysOfWeek[r.submittedAt.getDay()];
-      if (daysMap[dayLabel] !== undefined) {
-        daysMap[dayLabel]++;
+    const { submissionTrends, allResponses } = (() => {
+      if (range === '30D') {
+        const since = new Date();
+        since.setDate(since.getDate() - 29);
+        since.setHours(0, 0, 0, 0);
+        const all = responses;
+        const last30 = responses.filter((r) => r.submittedAt >= since);
+        const map: Record<string, number> = {};
+        last30.forEach((r) => {
+          const label = r.submittedAt.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          });
+          map[label] = (map[label] || 0) + 1;
+        });
+        const trends = Object.keys(daysMap).map((label) => ({
+          date: label,
+          count: map[label] || 0,
+        }));
+        return { submissionTrends: trends, allResponses: all };
       }
-    });
 
-    const submissionTrends = Object.entries(daysMap).map(([date, count]) => ({
-      date,
-      count,
-    }));
+      const map: Record<string, number> = {};
+      responses.forEach((r) => {
+        const dayLabel = daysOfWeek[r.submittedAt.getDay()];
+        if (daysMap[dayLabel] !== undefined) {
+          map[dayLabel] = (map[dayLabel] || 0) + 1;
+        }
+      });
+      const trends = Object.keys(daysMap).map((label) => ({
+        date: label,
+        count: map[label] || 0,
+      }));
+      return { submissionTrends: trends, allResponses: responses };
+    })();
 
     // Group responses by role/option if available, else standard category map
     const responsesByRoleOrCategory: Array<{ category: string; count: number }> = [];
     const roleCounts: Record<string, number> = {};
 
-    responses.forEach((r) => {
+    allResponses.forEach((r) => {
       r.answers.forEach((a) => {
         if (
           a.question.title.toLowerCase().includes('role') ||
@@ -124,6 +155,7 @@ export async function GET() {
       recentActivity,
       submissionTrends,
       responsesByRoleOrCategory,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error('Error fetching analytics:', error);
