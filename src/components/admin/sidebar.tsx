@@ -18,9 +18,16 @@ import { Role } from '@/types';
 interface SidebarProps {
   userRole?: Role;
   userName?: string;
+  mobileOpen?: boolean;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProps) {
+export function Sidebar({
+  userRole = 'EDITOR',
+  userName = 'Admin',
+  mobileOpen = false,
+  onNavigate,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -43,7 +50,20 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col justify-between border-r border-border bg-card/70 p-4 backdrop-blur-xl transition-all duration-300">
+    <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={onNavigate}
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col justify-between overflow-y-auto border-r border-border bg-card/70 p-4 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       {/* Top Header Logo */}
       <div>
         <div className="mb-6 flex items-center gap-3 px-2 pt-2">
@@ -69,7 +89,7 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
               (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
 
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href} onClick={onNavigate}>
                 <div
                   className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-150 hover:translate-x-1 ${
                     isActive
@@ -93,7 +113,7 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
 
       {/* CTA Button & User Details */}
       <div className="space-y-4">
-        <Link href="/admin/forms/new">
+        <Link href="/admin/forms/new" onClick={onNavigate}>
           <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 px-4 py-3 font-sans text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-transform hover:scale-[1.02] active:scale-[0.97]">
             <Plus className="h-4 w-4" />
             <span>Create New Form</span>
@@ -121,5 +141,6 @@ export function Sidebar({ userRole = 'EDITOR', userName = 'Admin' }: SidebarProp
         </div>
       </div>
     </aside>
+    </>
   );
 }

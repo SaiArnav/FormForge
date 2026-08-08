@@ -1,6 +1,5 @@
 import React from 'react';
-import { Sidebar } from '@/components/admin/sidebar';
-import { Header } from '@/components/admin/header';
+import { AdminShell } from '@/components/admin/admin-shell';
 import { getAuthSession } from '@/lib/auth';
 
 export default async function AdminLayout({
@@ -17,22 +16,13 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">
-      <Sidebar
-        userRole={session.role}
+      <AdminShell
         userName={session.name}
-      />
-
-      <div className="flex flex-1 flex-col ml-64 min-w-0">
-        <Header
-          userName={session.name}
-          userEmail={session.email}
-          userRole={session.role}
-        />
-
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
-          {children}
-        </main>
-      </div>
+        userEmail={session.email}
+        userRole={session.role}
+      >
+        {children}
+      </AdminShell>
     </div>
   );
 }

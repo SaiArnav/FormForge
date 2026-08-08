@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
-import { Search, Bell, HelpCircle, Sun, Moon, LogOut, User, ShieldCheck } from 'lucide-react';
+import { Search, Bell, HelpCircle, Sun, Moon, LogOut, User, ShieldCheck, Menu } from 'lucide-react';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -10,6 +10,7 @@ interface HeaderProps {
   userEmail?: string;
   userRole?: string;
   onSearch?: (query: string) => void;
+  onMenuClick?: () => void;
 }
 
 export function Header({
@@ -17,6 +18,7 @@ export function Header({
   userEmail = 'admin@formforge.io',
   userRole = 'OWNER',
   onSearch,
+  onMenuClick,
 }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -27,11 +29,18 @@ export function Header({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-border bg-card/70 px-6 backdrop-blur-xl transition-colors">
-      {/* Search Input */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex w-64 md:w-80 items-center rounded-full border border-border bg-muted/50 px-3.5 py-1.5 transition-all focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-400/20">
-          <Search className="h-4 w-4 text-muted-foreground mr-2" />
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-3 border-b border-border bg-card/70 px-4 backdrop-blur-xl transition-colors md:px-6">
+      {/* Mobile Menu + Search Input */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted/40 text-muted-foreground transition-all hover:scale-105 hover:bg-muted hover:text-foreground active:scale-95 lg:hidden"
+          title="Open Menu"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+        <div className="relative flex w-full max-w-xs md:max-w-md lg:max-w-xs xl:max-w-md items-center rounded-full border border-border bg-muted/50 px-3.5 py-1.5 transition-all focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-400/20">
+          <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
           <input
             type="text"
             placeholder="Search forms, responses, data..."
@@ -42,7 +51,7 @@ export function Header({
       </div>
 
       {/* Right Action Icons & Profile */}
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 md:gap-3">
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -71,13 +80,13 @@ export function Header({
 
         {/* Help Center */}
         <button
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/40 text-muted-foreground transition-all hover:scale-105 hover:bg-muted hover:text-foreground"
+          className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/40 text-muted-foreground transition-all hover:scale-105 hover:bg-muted hover:text-foreground"
           title="Help & Documentation"
         >
           <HelpCircle className="h-4 w-4" />
         </button>
 
-        <div className="h-5 w-px bg-border mx-1" />
+        <div className="hidden sm:block h-5 w-px bg-border mx-1" />
 
         {/* Profile Avatar Dropdown */}
         <div className="relative">
