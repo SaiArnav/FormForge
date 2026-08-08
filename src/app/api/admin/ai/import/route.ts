@@ -358,7 +358,15 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ form: newForm, questionCount: questions.length, provider: usedProvider }, { status: 201 });
+    const usedModel = usedProvider === 'groq' ? GROQ_MODEL : GEMINI_MODEL;
+    console.log(
+      `AI import by ${session.email}: file=${file.name}, provider=${usedProvider}, model=${usedModel}, questions=${questions.length}`
+    );
+
+    return NextResponse.json(
+      { form: newForm, questionCount: questions.length, provider: usedProvider, model: usedModel },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('AI import error:', error);
     return NextResponse.json(

@@ -21,6 +21,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
   const [dragOver, setDragOver] = useState(false);
   const [createdFormId, setCreatedFormId] = useState<string | null>(null);
   const [usedProvider, setUsedProvider] = useState<string | null>(null);
+  const [usedModel, setUsedModel] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -30,6 +31,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
     setStatus('IDLE');
     setError('');
     setUsedProvider(null);
+    setUsedModel(null);
   };
 
   const handleClose = () => {
@@ -70,6 +72,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
       setStatus('SUCCESS');
       setCreatedFormId(json.form.id);
       setUsedProvider(json.provider || 'gemini');
+      setUsedModel(json.model || (json.provider === 'groq' ? 'groq' : 'gemini'));
       onImported(json.form.id);
     } catch {
       setError('Network error while importing. Please try again.');
@@ -113,7 +116,7 @@ export function AiImportModal({ open, onClose, onImported }: AiImportModalProps)
             </p>
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-brand-400/30 bg-brand-400/10 px-3 py-1 text-[11px] font-mono font-semibold text-brand-300">
               <Sparkles className="h-3 w-3" />
-              Generated with {usedProvider === 'groq' ? 'Groq' : 'Gemini'}
+              Generated with {usedModel || (usedProvider === 'groq' ? 'Groq' : 'Gemini')}
             </p>
             <div className="mt-5 flex gap-2">
               {createdFormId && (
