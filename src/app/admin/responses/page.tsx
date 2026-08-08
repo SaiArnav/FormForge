@@ -25,7 +25,7 @@ export default function ResponsesManagementPage() {
   const fetchResponses = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/responses?search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/admin/responses?limit=100000&search=${encodeURIComponent(search)}`);
       if (res.ok) {
         const json = await res.json();
         setResponses(json.responses || []);
