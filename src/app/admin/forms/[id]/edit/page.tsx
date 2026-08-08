@@ -47,6 +47,7 @@ export default async function EditFormPage({
         id: o.id,
         value: o.value,
         order: o.order,
+        kind: o.kind,
       })),
     };
   });

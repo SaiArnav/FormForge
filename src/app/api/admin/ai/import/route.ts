@@ -25,6 +25,7 @@ const VALID_TYPES: QuestionType[] = [
   'RATING',
   'FILE_UPLOAD',
   'IMAGE_UPLOAD',
+  'GRID',
 ];
 
 const CHOICE_TYPES: QuestionType[] = ['DROPDOWN', 'MULTIPLE_CHOICE', 'CHECKBOXES'];
@@ -35,25 +36,32 @@ interface ParsedQuestion {
   description?: string;
   required: boolean;
   options?: string[];
+  rows?: string[];
+  columns?: string[];
 }
 
 const PROMPT = `You are a form builder assistant. Read the attached document and extract every question from it.
 
 For each question, return an object with:
 - "title": the question text (clean and human-readable)
-- "type": one of SHORT_ANSWER, PARAGRAPH, EMAIL, PHONE, NUMBER, DATE, TIME, DROPDOWN, MULTIPLE_CHOICE, CHECKBOXES, RATING, FILE_UPLOAD, IMAGE_UPLOAD. Choose the best match based on the question content. Use MULTIPLE_CHOICE for single-select choice questions, CHECKBOXES for multi-select ones.
+- "type": one of SHORT_ANSWER, PARAGRAPH, EMAIL, PHONE, NUMBER, DATE, TIME, DROPDOWN, MULTIPLE_CHOICE, CHECKBOXES, RATING, FILE_UPLOAD, IMAGE_UPLOAD, GRID. Choose the best match based on the question content. Use MULTIPLE_CHOICE for single-select choice questions, CHECKBOXES for multi-select ones. Use GRID when a single prompt introduces a list of statements/rows that each share the same set of answer columns (a matrix / Likert-scale table, e.g. "For each statement, choose how much you agree").
 - "description": optional help text if present, else omit
 - "required": true/false if the source indicates it, default false
 - "options": array of choice strings, ONLY when type is DROPDOWN, MULTIPLE_CHOICE, or CHECKBOXES
+- "rows": array of row statements, ONLY when type is GRID (each statement the respondent rates)
+- "columns": array of scale/column labels, ONLY when type is GRID (the shared answer options, e.g. ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"])
 
 Rules:
 - Do not include document headings, instructions, or unrelated prose as questions.
 - Preserve the order of questions.
 - If the document contains a title/heading for the whole form, set the top-level "title" and "description" fields; otherwise use "Untitled Form".
 - Strip answer keys / correct-answer markers from question text.
+- For GRID questions, do NOT split each row into its own question; group them under one GRID question with the shared columns.
+- If a scale is present in the document (e.g. 1-5, Strongly Disagree..Strongly Agree), use it verbatim as the columns, stripping any leading numbering or "=" prefix (e.g. "1 = Strongly Disagree" becomes "Strongly Disagree").
+- For GRID rows, strip any leading item numbers (e.g. "8. The teaching quality..." becomes "The teaching quality...").
 
 Respond with ONLY a single valid JSON object shaped like:
-{"title": "...", "description": "...", "questions": [{"title": "...", "type": "MULTIPLE_CHOICE", "description": "...", "required": false, "options": ["A", "B"]}]}`;
+{"title": "...", "description": "...", "questions": [{"title": "...", "type": "MULTIPLE_CHOICE", "description": "...", "required": false, "options": ["A", "B"]}, {"title": "...", "type": "GRID", "required": true, "rows": ["Row statement 1", "Row statement 2"], "columns": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}]}`;
 
 function extractJson(text: string): { title?: string; description?: string; questions: unknown } {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -80,12 +88,26 @@ function sanitizeQuestions(raw: unknown): ParsedQuestion[] {
         .map((o) => (typeof o === 'string' ? o : (o as Record<string, unknown>)?.value))
         .filter((o): o is string => typeof o === 'string' && o.trim().length > 0)
         .slice(0, 50);
+
+      const cleanList = (list: unknown): string[] =>
+        Array.isArray(list)
+          ? list
+              .map((s) => (typeof s === 'string' ? s : (s as Record<string, unknown>)?.value))
+              .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+              .slice(0, 50)
+          : [];
+
+      const rows = cleanList(q.rows);
+      const columns = cleanList(q.columns);
+
       return {
         title: String(q.title).trim().slice(0, 500),
         type,
         description: typeof q.description === 'string' ? q.description.trim().slice(0, 500) : undefined,
         required: Boolean(q.required),
         options: CHOICE_TYPES.includes(type) && options.length > 0 ? options : undefined,
+        rows: type === 'GRID' && rows.length > 0 ? rows : undefined,
+        columns: type === 'GRID' && columns.length > 0 ? columns : undefined,
       };
     });
 }
@@ -337,18 +359,30 @@ export async function POST(request: Request) {
         status: 'DRAFT',
         createdBy: session.userId,
         questions: {
-          create: questions.map((q, idx) => ({
-            type: q.type,
-            title: q.title,
-            description: q.description ?? null,
-            required: q.required,
-            order: idx,
-            options: q.options
-              ? {
-                  create: q.options.map((opt, optIdx) => ({ value: opt, order: optIdx })),
-                }
-              : undefined,
-          })),
+          create: questions.map((q, idx) => {
+            let gridOptions;
+            if (q.type === 'GRID') {
+              gridOptions = [
+                ...(q.rows || []).map((row, rIdx) => ({ value: row, order: rIdx, kind: 'ROW' as const })),
+                ...(q.columns || []).map((col, cIdx) => ({ value: col, order: cIdx, kind: 'COLUMN' as const })),
+              ];
+            }
+            return {
+              type: q.type,
+              title: q.title,
+              description: q.description ?? null,
+              required: q.required,
+              order: idx,
+              options:
+                gridOptions
+                  ? { create: gridOptions }
+                  : q.options
+                    ? {
+                        create: q.options.map((opt, optIdx) => ({ value: opt, order: optIdx })),
+                      }
+                    : undefined,
+            };
+          }),
         },
       },
       include: {

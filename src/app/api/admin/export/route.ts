@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         form: { select: { title: true } },
         answers: {
           include: {
-            question: { select: { title: true } },
+            question: { select: { title: true, type: true } },
           },
         },
       },
@@ -37,7 +37,18 @@ export async function GET(request: Request) {
     // 1. Gather all unique question titles as header columns
     const questionTitlesSet = new Set<string>();
     responses.forEach((r) => {
-      r.answers.forEach((a) => questionTitlesSet.add(a.question.title));
+      r.answers.forEach((a) => {
+        if (a.question.type === 'GRID') {
+          try {
+            const parsed = JSON.parse(a.value);
+            Object.keys(parsed).forEach((row) => questionTitlesSet.add(`${a.question.title} - ${row}`));
+          } catch {
+            questionTitlesSet.add(a.question.title);
+          }
+        } else {
+          questionTitlesSet.add(a.question.title);
+        }
+      });
     });
     const questionTitles = Array.from(questionTitlesSet);
 
@@ -46,7 +57,18 @@ export async function GET(request: Request) {
     const rows = responses.map((r) => {
       const answersMap: Record<string, string> = {};
       r.answers.forEach((a) => {
-        answersMap[a.question.title] = a.value;
+        if (a.question.type === 'GRID') {
+          try {
+            const parsed = JSON.parse(a.value);
+            Object.entries(parsed).forEach(([row, col]) => {
+              answersMap[`${a.question.title} - ${row}`] = String(col);
+            });
+          } catch {
+            answersMap[a.question.title] = a.value;
+          }
+        } else {
+          answersMap[a.question.title] = a.value;
+        }
       });
 
       const rowValues = [

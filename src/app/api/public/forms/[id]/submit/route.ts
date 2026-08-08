@@ -31,7 +31,22 @@ export async function POST(
     for (const q of form.questions) {
       if (q.required) {
         const val = answers[q.id];
-        if (
+        if (q.type === 'GRID') {
+          const rows = await db.questionOption.findMany({
+            where: { questionId: q.id, kind: 'ROW' },
+          });
+          const gridVal = val && typeof val === 'object' ? val : {};
+          const allAnswered = rows.every((row) => {
+            const rowVal = Array.isArray(gridVal[row.value]) ? gridVal[row.value][0] : gridVal[row.value];
+            return rowVal !== undefined && rowVal !== null && rowVal !== '';
+          });
+          if (!allAnswered) {
+            return NextResponse.json(
+              { error: `"${q.title}" requires an answer for every row` },
+              { status: 400 }
+            );
+          }
+        } else if (
           val === undefined ||
           val === null ||
           (typeof val === 'string' && val.trim() === '') ||

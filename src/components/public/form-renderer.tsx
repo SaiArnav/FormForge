@@ -50,7 +50,19 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     form.questions.forEach((q) => {
       if (q.required) {
         const val = answers[q.id];
-        if (
+        if (q.type === 'GRID') {
+          const rows = (q.options || []).filter((o: any) => o.kind !== 'COLUMN');
+          const answered =
+            val &&
+            typeof val === 'object' &&
+            rows.every((row: any) => {
+              const rowVal = Array.isArray(val[row.value]) ? val[row.value][0] : val[row.value];
+              return rowVal !== undefined && rowVal !== null && rowVal !== '';
+            });
+          if (!answered) {
+            newErrors[q.id] = 'Please answer every row in this grid';
+          }
+        } else if (
           val === undefined ||
           val === null ||
           (typeof val === 'string' && val.trim() === '') ||
@@ -343,6 +355,68 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {q.type === 'GRID' && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="p-2" />
+                          {(q.options || [])
+                            .filter((o: any) => o.kind === 'COLUMN')
+                            .map((col: any, colIdx: number) => (
+                              <th
+                                key={colIdx}
+                                className="px-2 py-2 text-center font-sans text-[11px] font-semibold text-muted-foreground"
+                              >
+                                {col.value}
+                              </th>
+                            ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(q.options || [])
+                          .filter((o: any) => o.kind !== 'COLUMN')
+                          .map((row: any, rowIdx: number) => {
+                            const rowAnswers: Record<string, string> =
+                              answers[q.id] && typeof answers[q.id] === 'object' ? answers[q.id] : {};
+                            return (
+                              <tr
+                                key={rowIdx}
+                                className="border-t border-border/60"
+                              >
+                                <td className="max-w-[240px] px-2 py-2.5 font-sans text-xs text-foreground">
+                                  {row.value}
+                                </td>
+                                {(q.options || [])
+                                  .filter((o: any) => o.kind === 'COLUMN')
+                                  .map((col: any, colIdx: number) => {
+                                    const isChecked = rowAnswers[row.value] === col.value;
+                                    return (
+                                      <td key={colIdx} className="px-2 py-2.5 text-center">
+                                        <input
+                                          type="radio"
+                                          name={`grid-${q.id}-${rowIdx}`}
+                                          value={col.value}
+                                          checked={isChecked}
+                                          onChange={() =>
+                                            handleInputChange(q.id, {
+                                              ...rowAnswers,
+                                              [row.value]: col.value,
+                                            })
+                                          }
+                                          className="h-4 w-4 cursor-pointer border-border accent-brand-400"
+                                        />
+                                      </td>
+                                    );
+                                  })}
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
 

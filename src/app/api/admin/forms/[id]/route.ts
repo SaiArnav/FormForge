@@ -88,6 +88,7 @@ export async function PUT(
                 create: (q.options || []).map((opt: any, optIdx: number) => ({
                   value: typeof opt === 'string' ? opt : opt.value,
                   order: optIdx,
+                  kind: opt && typeof opt === 'object' && opt.kind ? opt.kind : 'ROW',
                 })),
               },
             },

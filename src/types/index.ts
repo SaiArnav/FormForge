@@ -14,7 +14,8 @@ export type QuestionType =
   | 'CHECKBOXES'
   | 'RATING'
   | 'FILE_UPLOAD'
-  | 'IMAGE_UPLOAD';
+  | 'IMAGE_UPLOAD'
+  | 'GRID';
 
 export interface QuestionValidation {
   regex?: string;
@@ -29,6 +30,7 @@ export interface QuestionOptionDTO {
   id?: string;
   value: string;
   order: number;
+  kind?: 'ROW' | 'COLUMN';
 }
 
 export interface QuestionDTO {

@@ -306,9 +306,34 @@ export default function ResponsesManagementPage() {
                   <p className="font-mono text-xs font-semibold text-muted-foreground">
                     {ans.questionTitle}
                   </p>
-                  <p className="whitespace-pre-wrap font-sans text-sm font-medium text-foreground">
-                    {ans.value || '(No answer provided)'}
-                  </p>
+                  {ans.questionType === 'GRID' ? (
+                    (() => {
+                      let parsed: Record<string, string> = {};
+                      try {
+                        parsed = typeof ans.value === 'string' ? JSON.parse(ans.value) : ans.value;
+                      } catch {}
+                      const entries = Object.entries(parsed);
+                      return entries.length > 0 ? (
+                        <div className="space-y-1">
+                          {entries.map(([row, col]) => (
+                            <div
+                              key={row}
+                              className="flex items-start justify-between gap-3 rounded-lg border border-border/40 bg-card/50 px-2.5 py-1.5"
+                            >
+                              <span className="font-sans text-xs font-medium text-foreground">{row}</span>
+                              <span className="font-sans text-xs font-semibold text-brand-400">{col}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="font-sans text-sm font-medium text-foreground">(No answer provided)</p>
+                      );
+                    })()
+                  ) : (
+                    <p className="whitespace-pre-wrap font-sans text-sm font-medium text-foreground">
+                      {ans.value || '(No answer provided)'}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

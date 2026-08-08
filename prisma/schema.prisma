@@ -33,6 +33,12 @@ enum QuestionType {
   RATING
   FILE_UPLOAD
   IMAGE_UPLOAD
+  GRID
+}
+
+enum GridKind {
+  ROW
+  COLUMN
 }
 
 model AdminUser {
@@ -80,6 +86,7 @@ model QuestionOption {
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   value      String
   order      Int      @default(0)
+  kind       GridKind @default(ROW)
 }
 
 model Response {

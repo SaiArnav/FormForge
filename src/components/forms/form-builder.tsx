@@ -39,6 +39,7 @@ import {
   Star,
   Upload,
   Image as ImageIcon,
+  LayoutGrid,
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -57,6 +58,7 @@ const QUESTION_TYPE_OPTIONS: Array<{ label: string; type: QuestionType; icon: an
   { label: 'Multiple Choice', type: 'MULTIPLE_CHOICE', icon: CircleDot },
   { label: 'Checkboxes', type: 'CHECKBOXES', icon: CheckSquare },
   { label: 'Rating (1-5)', type: 'RATING', icon: Star },
+  { label: 'Grid (Matrix)', type: 'GRID', icon: LayoutGrid },
   { label: 'File Upload', type: 'FILE_UPLOAD', icon: Upload },
   { label: 'Image Upload', type: 'IMAGE_UPLOAD', icon: ImageIcon },
 ];
@@ -172,7 +174,17 @@ export function FormBuilder({ initialForm, isNew = false }: FormBuilderProps) {
               { value: 'Option 1', order: 0 },
               { value: 'Option 2', order: 1 },
             ]
-          : [],
+          : type === 'GRID'
+            ? [
+                { value: 'Row 1', order: 0, kind: 'ROW' },
+                { value: 'Row 2', order: 1, kind: 'ROW' },
+                { value: 'Strongly Disagree', order: 0, kind: 'COLUMN' },
+                { value: 'Disagree', order: 1, kind: 'COLUMN' },
+                { value: 'Neutral', order: 2, kind: 'COLUMN' },
+                { value: 'Agree', order: 3, kind: 'COLUMN' },
+                { value: 'Strongly Agree', order: 4, kind: 'COLUMN' },
+              ]
+            : [],
     };
     setQuestions([...questions, newQ]);
     markDirty();
@@ -414,6 +426,57 @@ function SortableQuestionCard({
     onUpdate({ options: currentOptions });
   };
 
+  const gridRows = (question.options || []).filter((o) => o.kind !== 'COLUMN');
+  const gridColumns = (question.options || []).filter((o) => o.kind === 'COLUMN');
+
+  const handleAddGridRow = () => {
+    const currentRows = gridRows;
+    const newOptions = [
+      ...currentRows,
+      { value: `Row ${currentRows.length + 1}`, order: currentRows.length, kind: 'ROW' as const },
+      ...gridColumns,
+    ];
+    onUpdate({ options: newOptions });
+  };
+
+  const handleUpdateGridRow = (rowIndex: number, val: string) => {
+    const rowId = gridRows[rowIndex];
+    const currentOptions = [...(question.options || [])].map((o) =>
+      o === rowId ? { ...o, value: val } : o
+    );
+    onUpdate({ options: currentOptions });
+  };
+
+  const handleDeleteGridRow = (rowIndex: number) => {
+    const rowId = gridRows[rowIndex];
+    const currentOptions = (question.options || []).filter((o) => o !== rowId);
+    onUpdate({ options: currentOptions });
+  };
+
+  const handleAddGridColumn = () => {
+    const currentColumns = gridColumns;
+    const newOptions = [
+      ...gridRows,
+      ...currentColumns,
+      { value: `Column ${currentColumns.length + 1}`, order: currentColumns.length, kind: 'COLUMN' as const },
+    ];
+    onUpdate({ options: newOptions });
+  };
+
+  const handleUpdateGridColumn = (colIndex: number, val: string) => {
+    const colId = gridColumns[colIndex];
+    const currentOptions = [...(question.options || [])].map((o) =>
+      o === colId ? { ...o, value: val } : o
+    );
+    onUpdate({ options: currentOptions });
+  };
+
+  const handleDeleteGridColumn = (colIndex: number) => {
+    const colId = gridColumns[colIndex];
+    const currentOptions = (question.options || []).filter((o) => o !== colId);
+    onUpdate({ options: currentOptions });
+  };
+
   return (
     <div ref={setNodeRef} style={style} className="glass-card rounded-2xl p-6 shadow-xs">
       <div className="flex items-start gap-3">
@@ -493,6 +556,74 @@ function SortableQuestionCard({
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Option</span>
               </button>
+            </div>
+          )}
+
+          {/* Grid (Matrix) Editor — rows + columns */}
+          {question.type === 'GRID' && (
+            <div className="space-y-3 pl-2 pt-1">
+              <div>
+                <p className="mb-1.5 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Rows (Statements)
+                </p>
+                <div className="space-y-1.5">
+                  {gridRows.map((row, rowIdx) => (
+                    <div key={rowIdx} className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-primary/40" />
+                      <input
+                        type="text"
+                        value={row.value}
+                        onChange={(e) => handleUpdateGridRow(rowIdx, e.target.value)}
+                        className="flex-1 rounded-lg border border-border/60 bg-muted/30 px-3 py-1 text-xs text-foreground outline-none focus:border-primary"
+                      />
+                      <button
+                        onClick={() => handleDeleteGridRow(rowIdx)}
+                        className="text-muted-foreground hover:text-destructive p-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleAddGridRow}
+                    className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Row</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-border/60 pt-2">
+                <p className="mb-1.5 text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Columns (Scale)
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {gridColumns.map((col, colIdx) => (
+                    <div key={colIdx} className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 px-2 py-1">
+                      <input
+                        type="text"
+                        value={col.value}
+                        onChange={(e) => handleUpdateGridColumn(colIdx, e.target.value)}
+                        className="w-28 bg-transparent px-1 py-0.5 text-xs text-foreground outline-none focus:border-primary"
+                      />
+                      <button
+                        onClick={() => handleDeleteGridColumn(colIdx)}
+                        className="text-muted-foreground hover:text-destructive p-0.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleAddGridColumn}
+                    className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
