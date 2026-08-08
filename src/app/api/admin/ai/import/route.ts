@@ -358,13 +358,8 @@ export async function POST(request: Request) {
       },
     });
 
-    const usedModel = usedProvider === 'groq' ? GROQ_MODEL : GEMINI_MODEL;
-    console.log(
-      `AI import by ${session.email}: file=${file.name}, provider=${usedProvider}, model=${usedModel}, questions=${questions.length}`
-    );
-
     return NextResponse.json(
-      { form: newForm, questionCount: questions.length, provider: usedProvider, model: usedModel },
+      { form: newForm, questionCount: questions.length, provider: usedProvider },
       { status: 201 }
     );
   } catch (error) {
